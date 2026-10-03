@@ -51,7 +51,7 @@ import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 
 @TeleOp(name = "BioBuzz StarterBot Teleop", group = "StarterBot")
 //@Disabled
-public class BioBuzzStarterbotTeleop extends OpMode {
+public class BioBuzzStarterBotTeleop extends OpMode {
 
     // Declare OpMode members.
     private DcMotor leftDrive = null;
