@@ -26,12 +26,17 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
  * whole path in the wrong direction (we saw this in the simulator).
  *
  * WHAT IT DOES:
+ *   0. SQUARE UP  - push gently back against the wall for under a second. Pressed flat against
+ *                   the wall, the robot lines itself up straight, so a slightly crooked or loose
+ *                   placement doesn't throw off the whole path.
  *   1. BACK OFF   - drive 6 in away from the wall, launcher end first (this earns LEAVE, 3 pts).
  *                   If the robot can't move away, it was probably placed the WRONG WAY ROUND
  *                   (pushing into the wall), so it stops everything instead of driving off wildly.
  *   2. AIM        - turn a few degrees so the launcher points at the opening of our upward
  *                   HIVE cell. It's a small turn (about 6 degrees) because we start almost lined up.
  *   3. SHOOT      - launcher spins up from START; feed the 4 balls only while it's at speed.
+ *                   The robot STANDS STILL for about 5 s here (in the simulator there are no
+ *                   balls, so watch the "NOW:" line on the screen instead).
  *   4. SPILL WAIT - wait 1 s so balls falling out of a tipping HIVE land first (rule G409).
  *   5. PARK PATH  - turn and drive along our side: west 30 in, north to the LOADING ZONE,
  *                   then turn and slide into the middle of the LOADING ZONE (PARK, 5 pts).
@@ -78,7 +83,7 @@ public class BlockheadsAutoStarterBot extends OpMode {
     static final double HOLD_KP = 0.03;           // how hard to steer back to straight while driving
     static final double HOLD_MAX = 0.2;
     static final double TURN_KP = 0.02;           // how hard to turn per degree still to go
-    static final double TURN_MIN_POWER = 0.12;    // enough power to actually move (6 wheels scrub when turning)
+    static final double TURN_MIN_POWER = 0.15;    // enough power to actually move (6 wheels scrub when turning)
     static final double TURN_MAX_POWER = 0.45;
     static final double TURN_TOLERANCE_DEG = 1.5; // close enough
     static final double SETTLE_S = 0.15;          // must stay close enough this long to count as done
@@ -87,11 +92,14 @@ public class BlockheadsAutoStarterBot extends OpMode {
     static final double FEED_SECONDS = 4.0;       // feed time (only counted while the launcher is at speed)
     static final double SHOOT_TIMEOUT_S = 8.0;
     static final double SPILL_WAIT_S = 1.0;
+    static final double SQUARE_UP_POWER = 0.25;   // gentle push back against the wall
+    static final double SQUARE_UP_S = 0.8;        // how long to push
+    static final double SQUARE_SETTLE_S = 0.25;   // then sit still this long before resetting the gyro
     static final double PARK_LATEST_START_S = 15.0;  // if the park path can't start by now, skip it
     static final double SAFETY_STOP_S = 28.5;        // stop everything, whatever is happening
 
     // ================= The steps, in order =================
-    private enum Step { BACK_OFF, AIM, SHOOT, SPILL_WAIT, PARK_WAIT, TURN_WEST, DRIVE_WEST, TURN_NORTH, DRIVE_NORTH, TURN_TO_WALL, SLIDE_IN, DONE }
+    private enum Step { SQUARE_UP, BACK_OFF, AIM, SHOOT, SPILL_WAIT, PARK_WAIT, TURN_WEST, DRIVE_WEST, TURN_NORTH, DRIVE_NORTH, TURN_TO_WALL, SLIDE_IN, DONE }
 
     private final StarterBotHardware robot = new StarterBotHardware();
     private IMU imu = null;
@@ -185,8 +193,12 @@ public class BlockheadsAutoStarterBot extends OpMode {
         // Not confirmed? Then don't spin the launcher; we'll only back off the wall.
         if (!placementConfirmed) note = "placement not confirmed (A): only backing off the wall";
         launcherOn = placementConfirmed;     // spin up now so it's ready when we finish aiming
-        startMove(BACK_OFF_IN, 0);
-        enter(Step.BACK_OFF);
+        if (placementConfirmed) {
+            enter(Step.SQUARE_UP);           // line up against the wall first
+        } else {
+            startMove(BACK_OFF_IN, 0);       // not confirmed: just leave the wall
+            enter(Step.BACK_OFF);
+        }
     }
 
     // loop() runs about 50 times a second until AUTO ends.
@@ -200,10 +212,29 @@ public class BlockheadsAutoStarterBot extends OpMode {
         if (step != Step.DONE && t >= SAFETY_STOP_S) { note = "safety stop at 28.5 s"; enter(Step.DONE); }
 
         switch (step) {
+            case SQUARE_UP:
+                // Push gently INTAKE-first into the wall, then stop and let the robot settle.
+                if (stepTimer.seconds() < SQUARE_UP_S) {
+                    double intakeFirst = LAUNCHER_ON_BACK ? SQUARE_UP_POWER : -SQUARE_UP_POWER;
+                    setDrive(intakeFirst, intakeFirst);
+                } else {
+                    stopDrive();
+                    if (stepTimer.seconds() >= SQUARE_UP_S + SQUARE_SETTLE_S) {
+                        // Now we're flat on the wall: this is our true starting heading and spot.
+                        if (imu != null) imu.resetYaw();
+                        poseX = START_X; poseY = START_Y;
+                        lastLeftTicks = robot.leftDrive.getCurrentPosition();
+                        lastRightTicks = robot.rightDrive.getCurrentPosition();
+                        startMove(BACK_OFF_IN, 0);
+                        enter(Step.BACK_OFF);
+                    }
+                }
+                break;
+
             case BACK_OFF:
-                // If we haven't moved at least 1 inch after 0.6 s, we're pushing into the wall:
-                // the robot was placed the wrong way round. Stop and don't shoot.
-                if (stepTimer.seconds() > 0.6 && Math.abs(travelledIn()) < 1.0) {
+                // If we still haven't moved half an inch after 1.5 s, something is blocking us
+                // (or the robot is placed the wrong way round). Stop and don't shoot.
+                if (stepTimer.seconds() > 1.5 && Math.abs(travelledIn()) < 0.5) {
                     note = "COULDN'T LEAVE THE WALL - robot placed the wrong way round? Stopped.";
                     enter(Step.DONE);
                 } else if (driveStep()) {
@@ -288,6 +319,7 @@ public class BlockheadsAutoStarterBot extends OpMode {
         lastLoopS = t;
 
         // Show what's happening on the Driver Station.
+        telemetry.addData("NOW", nowText());
         telemetry.addData("Step", step);
         telemetry.addData("AUTO time", "%.1f s", t);
         telemetry.addData("Aim turn", "%.1f deg (%s)", aimDeg, aimDeg < 0 ? "right" : "left");
@@ -305,6 +337,25 @@ public class BlockheadsAutoStarterBot extends OpMode {
     }
 
     // ================= Helpers =================
+
+    // A plain-words description of the current step for the screen.
+    private String nowText() {
+        switch (step) {
+            case SQUARE_UP:    return "lining up against the wall";
+            case BACK_OFF:     return "backing 6 in off the wall";
+            case AIM:          return String.format("aiming: small turn of %.1f deg", aimDeg);
+            case SHOOT:        return String.format("SHOOTING - standing still while feeding balls (%.1f of %.1f s)", fedSeconds, FEED_SECONDS);
+            case SPILL_WAIT:   return "waiting 1 s for balls to land";
+            case PARK_WAIT:    return String.format("waiting %.0f s before parking", parkWaitS);
+            case TURN_WEST:    return "turning toward our side wall";
+            case DRIVE_WEST:   return "driving toward our side wall";
+            case TURN_NORTH:   return "turning to drive past the HIVE";
+            case DRIVE_NORTH:  return "driving past the HIVE to the LOADING ZONE";
+            case TURN_TO_WALL: return "turning intake toward the side wall";
+            case SLIDE_IN:     return "sliding into the LOADING ZONE";
+            default:           return "done";
+        }
+    }
 
     // Move on to a new step and restart its timer.
     private void enter(Step next) {
@@ -375,8 +426,8 @@ public class BlockheadsAutoStarterBot extends OpMode {
         if (settleTimer.seconds() >= SETTLE_S) { stopDrive(); return true; }
         if (stepTimer.seconds() > TURN_TIMEOUT_S) {
             stopDrive();
-            // Way off target = something is wrong (blocked?). Stop the whole auto rather than guess.
-            if (Math.abs(error) > 10) { note = "turn failed (" + step + "), stopped"; enter(Step.DONE); return false; }
+            // Took too long: note it and carry on with the next step (never freeze the whole auto).
+            note = String.format("turn %s ended %.0f deg off; carried on", step, error);
             return true;
         }
         // Turn power: bigger when far away, never below the minimum that actually moves the robot.
