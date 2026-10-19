@@ -5,6 +5,7 @@ import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.BRAKE;
 
 // Pull in the FTC SDK pieces this file uses: motors, servos, the hardware list, PIDF numbers and
 // the battery voltage sensors. (The SDK is the code library FIRST gives us to run the robot.)
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
@@ -70,8 +71,26 @@ public class StarterBotHardware {
      * Pushing forward MUST drive the robot forward; flip the drive directions here if
      * the first test drive goes backwards.
      */
-    public static final DcMotorSimple.Direction LEFT_DRIVE_DIRECTION = DcMotorSimple.Direction.FORWARD;
-    public static final DcMotorSimple.Direction RIGHT_DRIVE_DIRECTION = DcMotorSimple.Direction.REVERSE;
+    // OUR ROBOT (checked 2026-10-19): with goBILDA's directions, pushing the stick forward drove the
+    // robot BACKWARD and turning was inverted, so both drive motors spin the other way on our robot.
+    // true = flip both drive motors from goBILDA's example. Every program that uses this class
+    // (the autos, BH Bench Check) gets the fix. Check: in BH Bench Check, dpad up must drive the
+    // INTAKE end first, and dpad left must turn the robot LEFT.
+    public static final boolean DRIVE_MOTORS_REVERSED = true;
+    public static final DcMotorSimple.Direction LEFT_DRIVE_DIRECTION =
+            DRIVE_MOTORS_REVERSED ? DcMotorSimple.Direction.REVERSE : DcMotorSimple.Direction.FORWARD;
+    public static final DcMotorSimple.Direction RIGHT_DRIVE_DIRECTION =
+            DRIVE_MOTORS_REVERSED ? DcMotorSimple.Direction.FORWARD : DcMotorSimple.Direction.REVERSE;
+
+    /*
+     * How the Control Hub is mounted, for the gyro (IMU). OUR ROBOT (2026-10-19): the hub stands on
+     * its side, the REV logo faces the robot's RIGHT, and the USB ports face the BACK (the launcher
+     * end; the intake end is the front). If turns stop with "turning the WRONG way" or "gyro
+     * heading didn't change", these two are wrong. BH Bench Check shows pitch and roll: both should
+     * be near 0 when the robot sits flat.
+     */
+    public static final RevHubOrientationOnRobot.LogoFacingDirection HUB_LOGO = RevHubOrientationOnRobot.LogoFacingDirection.RIGHT;
+    public static final RevHubOrientationOnRobot.UsbFacingDirection HUB_USB = RevHubOrientationOnRobot.UsbFacingDirection.BACKWARD;
     public static final DcMotorSimple.Direction INTAKE_DIRECTION = DcMotorSimple.Direction.FORWARD;
     public static final DcMotorSimple.Direction WINDMILL_DIRECTION = DcMotorSimple.Direction.REVERSE;
     public static final DcMotorSimple.Direction LEFT_INTAKE_SERVO_DIRECTION = DcMotorSimple.Direction.FORWARD;

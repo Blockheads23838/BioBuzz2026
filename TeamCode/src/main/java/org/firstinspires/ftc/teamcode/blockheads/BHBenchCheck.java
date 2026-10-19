@@ -73,9 +73,11 @@ public class BHBenchCheck extends OpMode {
         leftIntakeServo = find(CRServo.class, "left_intake_servo");
         rightIntakeServo = find(CRServo.class, "right_intake_servo");
 
-        // Same motor directions as the team TeleOp: one side is reversed so both sides drive forward together.
-        if (leftDrive != null) { leftDrive.setDirection(DcMotor.Direction.FORWARD); leftDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE); }
-        if (rightDrive != null) { rightDrive.setDirection(DcMotor.Direction.REVERSE); rightDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE); }
+        // Drive motor directions come from StarterBotHardware, the same settings the autos use.
+        // (On our robot both drive motors are flipped compared with goBILDA's example: see
+        // DRIVE_MOTORS_REVERSED there. Dpad up must drive the INTAKE end first.)
+        if (leftDrive != null) { leftDrive.setDirection(StarterBotHardware.LEFT_DRIVE_DIRECTION); leftDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE); }
+        if (rightDrive != null) { rightDrive.setDirection(StarterBotHardware.RIGHT_DRIVE_DIRECTION); rightDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE); }
         if (intake != null) intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         // Launcher: speed control (RUN_USING_ENCODER = the motor uses its encoder to hold a speed),
@@ -95,9 +97,9 @@ public class BHBenchCheck extends OpMode {
         // The orientation here is a guess; the yaw (turning) check works for any flat mounting.
         imu = hardwareMap.tryGet(IMU.class, "imu");
         if (imu != null) {
+            // Hub mounting (logo / USB directions) also comes from StarterBotHardware.
             imu.initialize(new IMU.Parameters(new RevHubOrientationOnRobot(
-                    RevHubOrientationOnRobot.LogoFacingDirection.UP,
-                    RevHubOrientationOnRobot.UsbFacingDirection.FORWARD)));
+                    StarterBotHardware.HUB_LOGO, StarterBotHardware.HUB_USB)));
             imu.resetYaw();
         }
         initWatch.reset();
@@ -201,6 +203,15 @@ public class BHBenchCheck extends OpMode {
         telemetry.addData("Launcher speed", launcher == null ? "n/a" : String.format("%.0f ticks/s (target %.0f)", launcher.getVelocity(), LAUNCHER_TARGET));
         telemetry.addData("CHECK 5 launcher", launcherResult);
         telemetry.addData("CHECK 6 gyro", imu == null ? "no \"imu\" in config (OK for now)" : String.format("yaw %.1f deg | %s", yaw(), turnResult));
+        // CHECK 6b: with the robot sitting flat, pitch and roll should both be near 0. If one is
+        // near 90 or 180, HUB_LOGO / HUB_USB in StarterBotHardware don't match how the hub is mounted.
+        if (imu != null) {
+            double pitch = imu.getRobotYawPitchRollAngles().getPitch(AngleUnit.DEGREES);
+            double roll = imu.getRobotYawPitchRollAngles().getRoll(AngleUnit.DEGREES);
+            boolean flatOk = Math.abs(pitch) < 10 && Math.abs(roll) < 10;
+            telemetry.addData("CHECK 6b hub mounting", "pitch %.0f, roll %.0f -> %s", pitch, roll,
+                    flatOk ? "OK (setting matches the hub)" : "PROBLEM: HUB_LOGO / HUB_USB setting is wrong");
+        }
         telemetry.addData("Battery", "%.2f V", batteryVoltage());
         telemetry.addLine("CHECK 7: while holding RB + A on blocks, WHICH END do balls come out? Write it down.");
     }
