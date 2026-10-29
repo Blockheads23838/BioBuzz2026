@@ -1,3 +1,4 @@
+
 /*   MIT License
  *   Copyright (c) [2026] [Base 10 Assets, LLC]
  *
@@ -49,7 +50,7 @@ import com.qualcomm.robotcore.hardware.PIDFCoefficients;
  * we will also need to adjust the "PIDF" coefficients with some that are a better fit for our application.
  */
 
-@TeleOp(name = "BioBuzz StarterBot Teleop", group = "StarterBot")
+@TeleOp(name = "BioBuzzStarterBotTeleop", group = "StarterBot")
 //@Disabled
 public class BioBuzzStarterBotTeleop extends OpMode {
 
@@ -72,8 +73,8 @@ public class BioBuzzStarterBotTeleop extends OpMode {
      * in the launch() function to only run the windmill servo when the motor is spinning fast
      * enough to make a successful throw.
      */
-    public final int LAUNCHER_TARGET_VELOCITY = 1250;
-    public final int LAUNCHER_MIN_VELOCITY = 1200;
+    public final int LAUNCHER_TARGET_VELOCITY = 1310;
+    public final int LAUNCHER_MIN_VELOCITY = 1300;
 
     /*
      * These two variables store the power we need to apply to the motors. In other cases, we may
@@ -112,8 +113,9 @@ public class BioBuzzStarterBotTeleop extends OpMode {
          * Note: The settings here assume direct drive on left and right wheels. Gear
          * Reduction or 90 Deg drives may require direction flips
          */
-        leftDrive.setDirection(DcMotor.Direction.FORWARD);
+        leftDrive.setDirection(DcMotor.Direction.REVERSE);
         rightDrive.setDirection(DcMotor.Direction.REVERSE);
+        intake.setDirection(DcMotor.Direction.REVERSE);
 
         /*
          * Setting zeroPowerBehavior to BRAKE enables a "brake mode". This causes the motor to
@@ -147,7 +149,7 @@ public class BioBuzzStarterBotTeleop extends OpMode {
          * servos work to pull elements into the intake.
          */
         rightIntakeServo.setDirection(DcMotorSimple.Direction.REVERSE);
-        windmillServo.setDirection(DcMotorSimple.Direction.REVERSE);
+        /*windmillServo.setDirection(DcMotorSimple.Direction.REVERSE);*/
 
         /*
          * Tell the driver that initialization is complete.
@@ -251,12 +253,11 @@ public class BioBuzzStarterBotTeleop extends OpMode {
          * holding down the right gamepad. If they are, then we want to start spinning up the launcher.
          * Otherwise, we start spinning the launcher down.
          */
-        if (gamepad1.right_bumper) {
+        if (gamepad2.right_bumper) {
             launcher.setVelocity(LAUNCHER_TARGET_VELOCITY);
         } else {
             launcher.setVelocity(0);
         }
-
         /*
          * Here we ask if the driver is currently pressing the right bumper, AND the launcher is
          * spinning fast enough to make a successful shot. If it is, then we will turn on the
@@ -264,7 +265,7 @@ public class BioBuzzStarterBotTeleop extends OpMode {
          * add some power to the intake power. This can sometimes help dislodge stuck elements from
          * inside the hopper.
          */
-        if (gamepad1.right_bumper && launcher.getVelocity() > LAUNCHER_MIN_VELOCITY) {
+        if (gamepad2.right_bumper/*& launcher.getVelocity() > LAUNCHER_MIN_VELOCITY*/){
             windmillServo.setPower(1);
             intakePower += 0.5;
         } else {

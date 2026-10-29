@@ -214,8 +214,8 @@ public class StarterBotAuto extends OpMode
          * Much like our drivetrain motors, we set the right intake servo to reverse so that both
          * servos work to pull elements into the intake.
          */
-        rightIntakeServo.setDirection(DcMotorSimple.Direction.REVERSE);
-        windmillServo.setDirection(DcMotorSimple.Direction.REVERSE);
+        rightIntakeServo.setDirection(DcMotorSimple.Direction.FORWARD);
+        windmillServo.setDirection(DcMotorSimple.Direction.FORWARD);
 
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");
@@ -399,6 +399,4 @@ public class StarterBotAuto extends OpMode
         return (driveTimer.seconds() > holdSeconds);
     }
 }
-
-
 
