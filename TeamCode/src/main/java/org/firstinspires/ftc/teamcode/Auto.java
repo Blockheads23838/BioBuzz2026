@@ -76,8 +76,8 @@ public class Auto extends OpMode
      * in the launch() function to only run the windmill servo when the motor is spinning fast
      * enough to make a successful throw.
      */
-    public final int LAUNCHER_TARGET_VELOCITY = 1250;
-    public final int LAUNCHER_MIN_VELOCITY = 1200;
+    public final int LAUNCHER_TARGET_VELOCITY = 1320;
+    public final int LAUNCHER_MIN_VELOCITY = 1310;
 
     /*
      * Here we capture a few variables used in driving the robot. DRIVE_SPEED and ROTATE_SPEED
@@ -130,12 +130,13 @@ public class Auto extends OpMode
         LAUNCH,
         BACKWARD1,
         TURN1,
-        FORWARD1,
+        BACKWARD2,
+     /* FORWARD1,
         TURN2,
         FORWARD2,
         TURN3,
         FORWARD3,
-        COMPLETE
+    */  COMPLETE
     }
 
     /*
@@ -259,29 +260,44 @@ public class Auto extends OpMode
         switch (autonomousState) {
             case LAUNCH:
                 launch(true);
-                if(autoTimer.seconds() > 10) {
+                if(autoTimer.seconds() > 6) {
                     launch(false);
                     intakePower = 0;
+                    autoTimer.reset();
                     autonomousState = AutonomousState.BACKWARD1;
                 }
                 break;
             case BACKWARD1:
                 leftDrive.setPower(-.5);
                 rightDrive.setPower(-.5);
-                if(autoTimer.seconds() > 10) {
+                if(autoTimer.seconds() >.3) {
+                    autoTimer.reset();
                     autonomousState = AutonomousState.TURN1;
                 }
                 break;
             case TURN1:
-                leftDrive.setPower(.5);
-                rightDrive.setPower(0);
-                if (autoTimer.seconds() > 10) {
-                    autonomousState =  AutonomousState.FORWARD1;
+                leftDrive.setPower(-0.5);
+                rightDrive.setPower(0.5);
+                if (autoTimer.seconds() > .2) {
+                    autoTimer.reset();
+                    autonomousState =  AutonomousState.BACKWARD2;
                 }
                 break;
+            case BACKWARD2:
+                leftDrive.setPower(-.5);
+                rightDrive.setPower(-.5);
+                if(autoTimer.seconds() > .9) {
+                    autonomousState = AutonomousState.COMPLETE;
+                }
+                break;
+/*
+* We changed rightdrive to -.5
+ */
+
+           /*
             case FORWARD1:
                 leftDrive.setPower(.5);
-                 rightDrive.setPower(.5);
+                rightDrive.setPower(.5);
                 if (autoTimer.seconds() >  14) {
                     autonomousState = AutonomousState.TURN2;
 
@@ -299,7 +315,7 @@ public class Auto extends OpMode
                 if (autoTimer.seconds() > 17.7 ) {
                     autonomousState = AutonomousState.COMPLETE;}
                 break;
-            case COMPLETE:
+          */  case COMPLETE:
                 leftDrive.setPower(0);
                 rightDrive.setPower(0);
                 telemetry.addLine("Auto Complete!");
@@ -440,3 +456,7 @@ public class Auto extends OpMode
 
         return (driveTimer.seconds() > holdSeconds);
     } }
+
+/*
+My name is Millan
+ */
